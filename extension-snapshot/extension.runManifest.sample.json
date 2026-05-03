@@ -1,0 +1,17 @@
+{
+  "run_id": "jh_20260502081912_a3f1c0",
+  "prompt_hash": "sha256:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+  "prompt_title": "Compare three model takes on the portable memory model",
+  "targets": ["ChatGPT", "DeepSeek", "Gemini"],
+  "target_tab_urls": [
+    "https://chatgpt.com/c/abc-123",
+    "https://chat.deepseek.com/a/chat/s/xyz-456",
+    "https://gemini.google.com/app/def-789"
+  ],
+  "pasted_count": 3,
+  "created_at": "2026-05-02T08:19:12.443Z",
+  "next_operator": "Claude Tab",
+  "requested_collection_mode": "poll_live_tabs",
+  "group_id": 47,
+  "target_tab_ids": [1863835940, 1863835941, 1863835942]
+}

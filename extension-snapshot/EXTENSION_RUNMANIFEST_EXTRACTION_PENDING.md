@@ -1,12 +1,10 @@
-# Extension runManifest extraction (PENDING)
+# Extension runManifest extraction
 
-Blocker: the extension-side verbatim extraction (buildRunManifest body or a redacted sample runManifest JSON) has not yet been provided in this workspace.
+Status: PRESENT
 
-What we do have (from handoff notes):
-- Contract-bearing hard-coded fields:
-  - `next_operator: "Claude Tab"`
-  - `requested_collection_mode: "poll_live_tabs"`
+See: `extension-snapshot/2026-05-02_extension-runmanifest-extraction.md`
 
-Next: paste either
-- buildRunManifest function body (verbatim), or
-- a single redacted sample `runManifest.json` from `chrome.storage.local` (jayhawk.runs.<runId>).
+This snapshot includes:
+- verbatim `buildRunManifest`, `openSite`, `pasteIntoTab`, `sanitizeSites`, `cloneDefaults`
+- storage keys (`jayhawk.*`) and message envelope types
+- a synthesized sample runManifest for fixtures

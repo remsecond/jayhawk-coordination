@@ -14,7 +14,7 @@ Define a shared contract between:
 
 ## 2. Canonical objects (verbatim)
 ### 2.1 Extension: runManifest (VERBATIM)
-> Paste verbatim schema/shape here.
+See: `extension-snapshot/2026-05-02_extension-runmanifest-extraction.md`
 
 Hard-coded contract-bearing fields (must be acknowledged):
 - `next_operator: "Claude Tab"`
