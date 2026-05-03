@@ -7,10 +7,11 @@ owner: roberto
 authors:
   - dispatch (claude)
 created: 2026-05-02
-last_updated: 2026-05-02
+last_updated: 2026-05-03
 revision_notes:
   - 2026-05-02 initial draft (Replit Huddle schema partial / inferred)
   - 2026-05-02 Replit App.tsx schema verified verbatim; [unconfirmed] tags removed; mismatches in §3 §4 §5 §6 made explicit; Q1 closed in §10
+  - 2026-05-03 Replit MAX_HUDDLES + per-target response handler extracted; Q2/Q3 closed in §10
 covers:
   - C:\Users\ClawDaddy\Documents\New project 2 (extension source)
   - C:\Users\ClawDaddy\Documents\jayhawk-v0.1.0 (extension installed)
@@ -20,6 +21,7 @@ related:
   - 10_Platforms/Sidecar/02_Specs/PORTABLE_MEMORY_CORE_V0.md
   - extension-snapshot/2026-05-02_extension-runmanifest-extraction.md (in coordination repo)
   - replit-sidecar-snapshot/2026-05-02_replit-app-tsx-extraction.md (in coordination repo)
+  - replit-sidecar-snapshot/2026-05-03_replit-app-tsx-target-response-handler.md (in coordination repo)
 note: "Documentation only. No code changes. No renames. No Card / Obsidian / provenance integration in v0."
 ---
 
@@ -28,6 +30,8 @@ note: "Documentation only. No code changes. No renames. No Card / Obsidian / pro
 > **Status: candidate.** Documentation only. This spec defines the minimal shared contract between two existing Jayhawk implementations so they can interoperate without either rewriting the other. Adoption requires a separate Roberto-promoted directive.
 >
 > **Revision 2026-05-02:** Replit App.tsx schema is now verified verbatim (see `replit-sidecar-snapshot/2026-05-02_replit-app-tsx-extraction.md`). All `[unconfirmed]` tags removed. Real schema mismatches surfaced in §3, §4, §5, §6.
+>
+> **Revision 2026-05-03:** Replit `MAX_HUDDLES` value and the per-target response handler (`setTargetResponse`) are now verified (see `replit-sidecar-snapshot/2026-05-03_replit-app-tsx-target-response-handler.md`).
 
 ---
 
@@ -165,7 +169,8 @@ Respond directly. Do not coordinate with other models. Do not assume shared cont
 | `active` → `complete` | `copyDirective()` succeeds (clipboard write OK) |
 | `active` → `abandoned` | `reconcilePriorActive(newId)` called by next `handleGo` for the previous active Huddle |
 | Per-target `(n/a)` → `opened` | `handleGo()` initializes all targets as `opened` (skipping `pending` to avoid UI flicker) |
-| Per-target `opened` → `complete` / `failed` | (presumed) when user pastes / errors — code path not in extracted snippets |
+| Per-target `opened` → `complete` | `setTargetResponse(modelId, text)` sets `Target.status = "complete"` when `text.trim().length >= 2` |
+| Per-target `opened` → `failed` | Not observed in extracted snippets (enum includes `failed`, but no setter found in extracted handlers) |
 
 Invariant: at most ONE Huddle has `status: "active"` at a time.
 
@@ -342,7 +347,7 @@ The two implementations use **different namespacing conventions** for storage ke
 
 ### Drift risk to flag now
 
-- The extension stores per-run manifests under `jayhawk.runs.<runId>` (one key per run). Replit stores all Huddles in a single `jayhawk_huddles` array (capped by `MAX_HUDDLES`, value not in extraction). Even with schema convergence, reading one from the other requires a transform.
+- The extension stores per-run manifests under `jayhawk.runs.<runId>` (one key per run). Replit stores all Huddles in a single `jayhawk_huddles` array (capped by `MAX_HUDDLES = 12`). Even with schema convergence, reading one from the other requires a transform.
 - The extension uses both `chrome.storage.sync` (UI prefs) and `chrome.storage.local` (run manifests). Replit uses only browser `localStorage`. Cross-device behavior differs — extension prefs sync across the user's Chrome, Replit Huddles do not.
 - These are storage-layer realities, not contract concerns. The contract is about object shape, not where the object lives.
 
@@ -419,8 +424,8 @@ Reaffirms boundaries from the integration readiness assessment:
 Recorded as open, not blockers. v0 is documentation; these can be resolved in v0.1 or later.
 
 1. ~~**Full Replit Huddle type body.**~~ **RESOLVED 2026-05-02** via App.tsx extraction. See `replit-sidecar-snapshot/2026-05-02_replit-app-tsx-extraction.md`.
-2. **`MAX_HUDDLES` value** in Replit's `saveHuddles` — cap on stored Huddle history. Not in the extraction snippets. Ask Replit AI when convenient; small follow-up.
-3. **Per-target completion code path** in Replit (`opened → complete` / `opened → failed`). The transition is presumed (user paste populates `Target.response` and bumps status); verify by extracting the response-paste handler from App.tsx.
+2. ~~**`MAX_HUDDLES` value** in Replit's `saveHuddles`.~~ **RESOLVED 2026-05-03:** `MAX_HUDDLES = 12`. See `replit-sidecar-snapshot/2026-05-03_replit-app-tsx-target-response-handler.md`.
+3. ~~**Per-target completion code path** in Replit (`opened → complete` / `opened → failed`).~~ **RESOLVED (partial) 2026-05-03:** `setTargetResponse(modelId, text)` sets `Target.response` and flips `Target.status` to `"complete"` when `text.trim().length >= 2` (and can revert `complete → opened` if text becomes non-meaningful). A `failed` setter was not observed in the extracted handler. See `replit-sidecar-snapshot/2026-05-03_replit-app-tsx-target-response-handler.md`.
 4. **Storage namespace convergence (`jayhawk.` vs `jayhawk_`).** v0 keeps both. v0.1 picks one if migration cost is acceptable.
 5. **`next_operator` and `requested_collection_mode` as enums vs literals.** Today both are hard-coded. v0 preserves; v0.1 may enumerate when alternatives appear.
 6. **Lifecycle states extension doesn't track.** Should the extension start setting `dispatched`/`collecting`? Or stay terminal-manifest-only? v0 allows both; v0.1 may pick.
@@ -432,4 +437,4 @@ Recorded as open, not blockers. v0 is documentation; these can be resolved in v0
 
 ---
 
-*End of Jayhawk Shared Contract v0 (revised 2026-05-02). Candidate. Documentation only. Promotion to canonical requires Roberto sign-off after the open questions in §10 are at least triaged. No code changes follow from filing this document.*
+*End of Jayhawk Shared Contract v0 (revised 2026-05-03). Candidate. Documentation only. Promotion to canonical requires Roberto sign-off after the open questions in §10 are at least triaged. No code changes follow from filing this document.*
