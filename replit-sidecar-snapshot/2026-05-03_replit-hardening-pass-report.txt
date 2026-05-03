@@ -1,0 +1,34 @@
+Fixing the architect's finding — move copy-error block above the readiness checklist, and add the optional setPromptCopied(false) reset.
+
+
+2 actions
+Now remove the duplicate copy-error block below the readiness checklist, polish the prompt-copy failure path, then re-run typecheck and tests.
+
+
+7 actions
+All architect findings resolved and the full e2e test plan now passes end-to-end. Here's the final state of the hardening pass:
+
+1. Theme tokens — already in place from prior pass (verified still working in test step 22).
+
+2. Export buttons on Active Huddle — all three present:
+
+copy-prompt ("Copy Prompt") — already existed; now also clears copyError on success and resets promptCopied on failure
+copy-directive ("Copy Directive") — already existed; now wired to error state
+copy-huddle-json ("Copy Huddle JSON") — new, replaces the old promote-obsidian stub. Exports { schema: "jayhawk.huddle.v1", exportedAt: <ISO>, huddle: <full Huddle> } as pretty JSON. No schema rewrite — wraps the existing Huddle type.
+3. App footer — new data-testid="app-footer" block sits as the last sibling inside the outer flex column (header → scrollable body → dispatch-controls → footer), so layout is unchanged. Three lines:
+
+"Jayhawk Replit UX Reference"
+"local only · not canonical memory"
+"v0.1 candidate · 2026-05-03" (data-testid="app-version")
+4. Empty / error states:
+
+"Select at least one target." in selected-targets-summary when no chips active
+"No Huddles yet." in huddles-panel-empty (was "No recent Huddles yet.")
+data-testid="copy-error" transient banner ("Copy failed — clipboard unavailable.") rendered above the readiness checklist in the dispatch-controls bar, shared by all three copy actions, auto-dismisses after 2.4s, and is cleared on any successful copy
+5. Checks:
+
+pnpm --filter @workspace/sidecar exec tsc --noEmit → clean
+e2e test plan via the testing skill → success, including the explicit DOM-order check that copy-error precedes readiness-checklist, the simulated clipboard-failure path, auto-dismiss, and theme toggling preserving the footer
+Constraints honored: no backend, no Obsidian (stub removed in favor of the JSON export), no automation, no extension hooks, no schema rewrites. Compact sidebar style preserved — the footer is 9px text, three short lines, separated only by a divider.
+
+The Replit Jayhawk app is now stable and self-contained as the UX reference for future Codex/Claude Code integration work.
