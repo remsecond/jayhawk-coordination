@@ -102,13 +102,20 @@ While all four hold, the posture is sufficient. The contract does not pretend it
 
 ### §11.3.2 Migration triggers
 
-When **any** of the following occurs, migration to a dedicated private credentials dir becomes **required**, not optional:
+When **any** of the following occurs, migration to a dedicated private credentials dir becomes **required**, not optional. Triggers split into two classes:
+
+**Defense-degradation triggers** (a defensive layer weakens):
 
 1. **Hermes uid regresses** away from the dedicated 2000:2000 (e.g., back to root or uid 1000) — invalidates the DAC defense layer.
 2. **The OpenClaw → Hermes bind mount flips to rw** for any reason — invalidates kernel-level write protection and changes the threat model.
-3. **A new credential file lands** in `.openclaw/credentials/` *or* in `/coordination/shared/` (which v0.1 removes, but if reintroduced) *or* anywhere else on the shared surface — the assumption "the only thing in credentials/ is one Telegram pairing file Hermes already can't read" stops holding.
+3. **A new credential file lands** in `.openclaw/credentials/` *or* anywhere else on the shared surface — the assumption "the only thing in credentials/ is one Telegram pairing file Hermes already can't read" stops holding.
 
-The contract surfaces these triggers explicitly so that the moment to act is documented, not discovered.
+**Scope-expansion triggers** (the threat surface grows):
+
+4. **A third agent joins the coordination surface.** Two-agent posture relies on knowing exactly which uid is on the other side; a third uid invalidates the per-uid allowlist reasoning.
+5. **Off-box deployment enters the roadmap.** Multi-host coordination removes the "single Linux kernel enforces ro" guarantee and introduces network transports — a different threat model that requires structural credential isolation, not allowlist-on-mount.
+
+The contract surfaces all five triggers explicitly so that the moment to act is documented, not discovered.
 
 ### §11.3.3 Migration definition (when triggered)
 
