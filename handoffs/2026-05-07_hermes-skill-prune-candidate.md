@@ -51,12 +51,12 @@ This list is drafted from the **Hermes Agent v0.9.0 startup banner** as captured
 
 ### Probable prune — depends on Tab's actual use
 
-| Toolset | Reason to consider pruning |
-|---|---|
-| `homeassistant` (`ha_call_service`, `ha_get_state`, …) | only useful if Tab actually runs Home Assistant. **Confirm before pruning** — easy to keep, easy to lose. |
-| `image_gen` (`image_generate`) | not relevant to coordination work; reduces image-output prompt-injection surface |
-| `tts` | only matters if Hermes outputs audio. Default lean: **prune** unless Tab wants voice. |
-| `vision` | image ingestion. Default lean: **keep** — useful for screenshot debugging. |
+| Toolset | Reason to consider pruning | Decision (2026-05-07) |
+|---|---|---|
+| `homeassistant` (`ha_call_service`, `ha_get_state`, …) | only useful if Tab actually runs Home Assistant | **Keep**. Tab: "no but may." Optionality is cheap; the cluster doesn't hold credentials by default. |
+| `image_gen` (`image_generate`) | not relevant to coordination work; reduces image-output prompt-injection surface | **Prune**. |
+| `tts` | only matters if Hermes outputs audio | **Prune**. Tab: "no idea" — default to remove. Trivially restorable later if Tab decides he wants voice. |
+| `vision` | image ingestion | **Keep** — useful for screenshot debugging when Tab pastes images into Hermes. |
 
 ### Hard prune — definitely not load-bearing
 
@@ -104,9 +104,9 @@ This list is drafted from the **Hermes Agent v0.9.0 startup banner** as captured
 
 ## What's still uncertain (resolves when config.yaml prints)
 
-1. **Truncated cluster listings**: `creative`, `mlops`, `productivity`, `research`, `software-development`, `github` all show `…` in the banner. Fill from config.
-2. **`homeassistant` toolset usage**: keep or prune depends on whether Tab actually runs HA.
-3. **`tts` / `vision`**: keep or prune depends on whether Hermes ever speaks aloud or processes images.
+1. **Truncated cluster listings**: `creative`, `mlops`, `productivity`, `research`, `software-development`, `github` all show `…` in the banner. Fill from config. Tab on this 2026-05-07: "not sure" — proposed approach is item-by-item review when each cluster's full skill list is visible, defaulting to keep unless I can articulate a specific reason to prune.
+2. ~~`homeassistant` toolset usage~~ **Resolved 2026-05-07**: keep (Tab: "no but may" → preserve optionality).
+3. ~~`tts` / `vision`~~ **Resolved 2026-05-07**: tts → prune; vision → keep.
 4. **Exact YAML structure**: skills may be listed under `enabled:` / `disabled:` arrays, by cluster, or via per-skill blocks. The diff format depends on Hermes's actual config schema, which we haven't seen yet.
 
 ## Process when config.yaml lands
