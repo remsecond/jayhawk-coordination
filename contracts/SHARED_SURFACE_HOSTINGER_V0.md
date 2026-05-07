@@ -159,6 +159,7 @@ The two containers run on separate compose-default networks (`hermes-agent-bnz0_
 5. Does Tab want Telegram pairing exposed to Hermes intentionally, or stay strictly Claw-private? v0 default: strictly private (`telegram/` is in the deny set, not the allowlist).
 6. Should the jayhawk-coordination repo (this one) be writable by the agents (push) so coordination history survives container reset? Or is `/coordination` ephemeral-but-persistent-volume sufficient?
 7. Does Claw need to read `/coordination/from-hermes/` on a cadence, or only event-driven? Affects whether a fs-watcher sidecar is needed.
+8. **Hermes skill posture.** The default Nous install ships `/opt/hermes/skills/red-teaming/godmode/` and other skill clusters Hermes does not need for coordination. Tomorrow's planned `config.yaml` cleanup should prune red-teaming, gaming, image-gen, etc. The contract should reference whatever pruned set lands as the agreed allowlist. Not blocking v0.
 
 ---
 

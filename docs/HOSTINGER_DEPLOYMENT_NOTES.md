@@ -6,12 +6,12 @@
 
 These are observed truths the plan depends on. Re-verify if anything has been changed since the recon date.
 
-- Host: single Hostinger box. Two containers: `openclaw-iemy-openclaw-1` and `hermes-agent-bnz0-hermes-agent-1`.
+- Host: single Hostinger VPS `srv1317315.hstgr.cloud` (76.13.118.164). Two containers: `openclaw-iemy-openclaw-1` (IP 172.18.0.2 on `openclaw-iemy_default`) and `hermes-agent-bnz0-hermes-agent-1` (IP 172.19.0.2 on `hermes-agent-bnz0_default`).
 - Compose files:
   - `/docker/openclaw-iemy/docker-compose.yml`
   - `/docker/hermes-agent-bnz0/docker-compose.yml`
 - Today's shared surface: single bind mount of `/docker/openclaw-iemy/data/.openclaw → /openclaw-source` ro, declared in **Hermes's** compose.
-- OpenClaw data root: `/docker/openclaw-iemy/data/.openclaw/`, owned `ubuntu:ubuntu` (uid 1000).
+- OpenClaw data root: `/docker/openclaw-iemy/data/.openclaw/`, owned `ubuntu:ubuntu` (uid 1000). OpenClaw also has a second rw bind, `/docker/openclaw-iemy/data/linuxbrew → /home/linuxbrew`, unrelated to the shared surface.
 - Hermes writable home: `/opt/data` in container ↔ `/docker/hermes-agent-bnz0/data` on host.
 - Networks: `openclaw-iemy_default` (172.18.0.0/16) and `hermes-agent-bnz0_default` (172.19.0.0/16). Not joined. No DNS between containers.
 - No cron, no systemd timers touching the surface. No watchdog.
