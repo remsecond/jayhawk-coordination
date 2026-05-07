@@ -109,13 +109,40 @@ This list is drafted from the **Hermes Agent v0.9.0 startup banner** as captured
 3. ~~`tts` / `vision`~~ **Resolved 2026-05-07**: tts → prune; vision → keep.
 4. **Exact YAML structure**: skills may be listed under `enabled:` / `disabled:` arrays, by cluster, or via per-skill blocks. The diff format depends on Hermes's actual config schema, which we haven't seen yet.
 
-## Process when config.yaml lands
+## Update 2026-05-07: skills are filesystem-based, not YAML-managed
 
-1. Diff this list against the actual `enabled:` / `disabled:` (or equivalent) blocks in `config.yaml`.
-2. Resolve the four uncertainties above with Tab.
-3. Produce a **proposed `config.yaml` patch** in unified diff format — not applied, just shown for Tab's review.
-4. Tab approves; Tab Claude (or whoever's driving Hermes that session) applies the patch via Hermes's `file/patch` tool, restarts Hermes, verifies the prune took effect with a fresh `/help` listing.
-5. Document the applied diff + the new tool/skill counts in a follow-up handoff: `handoffs/2026-05-07_hermes-skill-prune-applied.md`.
+The Hermes operator session printed `/opt/data/config.yaml` and confirmed it is **three lines, 56 bytes**:
+
+```yaml
+model:
+  provider: anthropic
+  default: claude-opus-4-7
+```
+
+That's the entire file. Skills are **not declared in YAML at all** — Hermes discovers them by scanning `/opt/data/skills` and plugin dirs. API credentials aren't in this file either; they come from env vars (per Phase 2's `.env` findings).
+
+This changes the prune approach materially:
+
+- **Wrong artifact**: a YAML diff. There's nothing to diff.
+- **Right artifact**: a top-level directory listing of `/opt/data/skills` and any plugin dirs, then per-directory keep-or-cut decisions. The "patch" becomes "remove these directories" (or rename them out of the discovery path) rather than "comment out these YAML keys."
+
+### Revised process
+
+1. **Recon prompt to Hermes** (single-line, no recursion, no cat):
+   ```
+   ls -la /opt/data/skills /opt/data/plugins 2>/dev/null;
+   echo ---;
+   find /opt/data -maxdepth 3 -type d -name skills 2>/dev/null
+   ```
+2. **Categorize each top-level skill directory** against the buckets in this doc (hard keep / probable prune / hard prune).
+3. **Resolve any directories** I haven't anticipated above by asking Tab item-by-item.
+4. **Propose a removal plan**: list of dirs to `rm -rf` (or rename to e.g. `skills.disabled/<name>` if reversibility matters more than disk space).
+5. **Tab approves**; the operator applies via Hermes's `file` toolset, restarts Hermes, verifies via fresh `/help` that the skill count dropped to the expected number.
+6. **Land the applied diff** in `handoffs/2026-05-07_hermes-skill-prune-applied.md`, including before/after skill counts and the actual command(s) run.
+
+### What this does NOT change
+
+The keep/probable-prune/hard-prune buckets above are still valid — they categorize by skill purpose, not by config format. Use them as the categorization framework when the directory listing arrives.
 
 ## What this does NOT do
 
