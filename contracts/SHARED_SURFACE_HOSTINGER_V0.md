@@ -75,9 +75,10 @@ A new docker volume `coordination-shared` is mounted rw at `/coordination` in **
 /coordination/
   from-claw/                 # ONLY Claw writes; Hermes reads
   from-hermes/               # ONLY Hermes writes; Claw reads
+  from-jayhawk-repo/         # mirrored from this repo's outbox/; both agents read; runtime read-only
   shared/                    # both write, but only to uuid-scoped or agent-prefixed filenames
   inbox/                     # human (Tab) drops things here; agents read
-  contracts/                 # snapshot of jayhawk-coordination repo's contracts/, pinned by commit hash
+  contracts/                 # mirrors this repo's contracts/, pinned by commit hash
   README.md                  # this contract's terse summary, for in-situ reference
 ```
 
@@ -128,7 +129,14 @@ b) **One canonical uid for git writes.** Only Claw (uid 1000) writes to `workspa
 
 ## 7. Contract sync
 
-`/coordination/contracts/` mirrors the `contracts/` dir of the jayhawk-coordination git repo, pinned by commit hash recorded in `/coordination/contracts/.commit`. Sync runs on container start (and on demand) via `git archive` from the public coordination remote — no live working tree, just a snapshot. Rationale: agents at runtime read a known immutable snapshot; the repo remains the source of truth.
+Two mirror targets, both populated on container start (and on demand) via `git archive` from the public coordination remote — no live working trees, just snapshots. Rationale: agents at runtime read known immutable snapshots; the repo remains the source of truth.
+
+| Source dir in repo | Target on `/coordination/` | Purpose |
+|---|---|---|
+| `contracts/` | `/coordination/contracts/` | canonical specs; agents reference for rules |
+| `outbox/` | `/coordination/from-jayhawk-repo/` | ad-hoc artifacts from Claude sessions working out of the repo; visible to both agents |
+
+Both targets pin their source commit hash in a sibling `.commit` file (`/coordination/contracts/.commit`, `/coordination/from-jayhawk-repo/.commit`). Both are runtime read-only — writes to these paths happen via repo commits, not container processes.
 
 ## 8. Network model
 

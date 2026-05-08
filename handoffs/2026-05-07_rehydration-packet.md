@@ -19,11 +19,13 @@ purpose: "Single self-contained paste-ready document to rehydrate any Claude ses
 Files on the branch (as of 2026-05-07):
 
 ```
+CLAUDE.md                                 auto-loaded at session start; orientation
 contracts/
   SHARED_SURFACE_HOSTINGER_V0.md          v0 candidate (11 sections)
   SHARED_SURFACE_HOSTINGER_V0_1.md        v0.1 candidate (Telegram + bus + conditional credentials)
 docs/
   HOSTINGER_DEPLOYMENT_NOTES.md           executable deploy plan; §7 = post-deploy verification block
+  SESSION_END_CHECKLIST.md                three-step wrap-up
 handoffs/
   2026-05-07_hermes-recon-shared-surface.md
   2026-05-07_hermes-openclaw-integration-findings.md
@@ -31,6 +33,8 @@ handoffs/
   2026-05-07_hermes-skill-prune-candidate.md
   2026-05-07_for-claw-telegram-research.md
   2026-05-07_rehydration-packet.md        ← this file
+outbox/
+  README.md                               ad-hoc artifacts; mirrored to /coordination/from-jayhawk-repo/
 ```
 
 ## 1. The two boxes (load-bearing facts)

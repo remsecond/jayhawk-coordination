@@ -123,9 +123,10 @@ Two outbound directories, scope enforced by uid + mount mode. **No shared rw dir
 |---|---|---|---|
 | `/coordination/from-claw/` | Claw (uid 1000) — **rw** | Hermes (uid 2000) — **ro** | originator-only writes |
 | `/coordination/from-hermes/` | Hermes (uid 2000) — **rw** | Claw (uid 1000) — **ro** | originator-only writes |
+| `/coordination/from-jayhawk-repo/` | repo sync (`outbox/`) — write | both — read | snapshot, runtime read-only; ad-hoc Claude-session artifacts |
 | `/coordination/inbox/for-claw/` | humans — write | Claw — read | per-agent inbox (v0 §11.2 locked) |
 | `/coordination/inbox/for-hermes/` | humans — write | Hermes — read | per-agent inbox (v0 §11.2 locked) |
-| `/coordination/contracts/` | repo sync — write | both — read | snapshot, runtime read-only |
+| `/coordination/contracts/` | repo sync (`contracts/`) — write | both — read | snapshot, runtime read-only; canonical specs |
 
 **v0's `/coordination/shared/` dir is removed.** v0 allowed both agents to write into a shared dir using uuid-scoped filenames. v0.1 forbids it: each agent writes only its own outbound dir. Stricter, less ambiguity, no possibility of two writers claiming the same path.
 
