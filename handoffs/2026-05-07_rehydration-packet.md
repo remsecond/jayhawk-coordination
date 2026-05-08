@@ -35,7 +35,12 @@ handoffs/
   2026-05-07_rehydration-packet.md        ← this file
 outbox/
   README.md                               ad-hoc artifacts; mirrored to /coordination/from-jayhawk-repo/
+  2026-05-07_branch-point-A_arc-prototype.md   bookmark for paused arcs/blocks work
+tasks/
+  2026-05-07_secrets_recon.md             open infra cleanup; items 1-3 actionable
 ```
+
+Convention for `tasks/`: open infrastructure cleanup, recon outputs, and to-do items that aren't case artifacts. Files dated `YYYY-MM-DD_<slug>.md`, frontmatter includes `status: open|closed`.
 
 ## 1. The two boxes (load-bearing facts)
 

@@ -15,7 +15,7 @@ If you're working on the Hermes/OpenClaw stream, you're on the second branch. **
 
 > **Chat is not a source of truth. If it matters, it lands here as a file + commit.**
 
-Every recon capture, every external Claude session's draft, every decision goes into a file. Forwarded artifacts (other Claude sessions' drafts, raw recon output, anything-else-wrote-it material) land in `handoffs/`. Canonical specs land in `contracts/`. Operational/architectural prose lands in `docs/`.
+Every recon capture, every external Claude session's draft, every decision goes into a file. Forwarded artifacts (other Claude sessions' drafts, raw recon output, anything-else-wrote-it material) land in `handoffs/`. Canonical specs land in `contracts/`. Operational/architectural prose lands in `docs/`. Open infrastructure cleanup, recon outputs, and to-do items that aren't case artifacts land in `tasks/` (files dated `YYYY-MM-DD_<slug>.md`, frontmatter includes `status: open|closed`). Ad-hoc cross-session artifacts land in `outbox/` (mirrored to `/coordination/from-jayhawk-repo/` on Hostinger).
 
 This is what makes work portable across sessions and agents. It's also the same shape the Hermes/Claw filesystem bus (v0.1 §11.2) implements for the agents themselves.
 
