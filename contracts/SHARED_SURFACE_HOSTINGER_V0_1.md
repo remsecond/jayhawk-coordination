@@ -25,26 +25,91 @@ note: "Candidate v0.1 spec extending v0. Where v0.1 diverges from v0, v0.1 super
 
 ### §11.1.1 Per-agent bots
 
-Each agent operates its own Telegram bot identity. **Not a shared bot.** Two distinct bots, two distinct tokens, two distinct usernames. Rationale: when a human sees a Telegram message, the sender identity carries authorship without parsing the body.
+Each agent operates its own Telegram bot identity. **Not a shared bot.** Two distinct bots, two distinct tokens, two distinct usernames. Rationale: chat-header identity tells humans who's pinging without parsing the body; per-token revocation contains compromise; per-bot mute is possible.
 
 Token + pairing storage:
 
 | Agent | Path on host | Visibility |
 |---|---|---|
-| Claw | `/docker/openclaw-iemy/data/.openclaw/credentials/telegram-pairing.json` | Claw-private (already exists) |
-| Hermes | `/docker/hermes-agent-bnz0/data/credentials/telegram-pairing.json` | Hermes-private (to be created in `/opt/data/credentials/` inside her container) |
+| Claw | `/docker/openclaw-iemy/data/.openclaw/credentials/telegram-pairing.json` | Claw-private (already exists; mode 0600 uid 1000) |
+| Hermes | `/docker/hermes-agent-bnz0/data/.private/hermes-telegram.token` | Hermes-private (to be created when her bot is provisioned) |
 
-Hermes's pairing file MUST live inside her own `/opt/data` writeable volume, never on the shared surface or anywhere visible to Claw.
+Hermes's token MUST live inside her own writeable `/opt/data` volume under `.private/`, never on the shared surface and never in the existing `credentials/` dir. Adding to `credentials/` would fire trigger #3 in §11.3.2 (new credential lands on the shared surface) and force the conditional migration.
 
 ### §11.1.2 Private 1:1 chats only (v0.1 scope)
 
-Each bot talks to humans in **1:1 chats only**. No group chats. No broadcast topics. No shared inbox channels. The bot DM is a per-human, per-agent thread.
+Each bot talks to humans in **1:1 chats only**. No group chats. No broadcast topics. No shared inbox channels.
 
-Rationale: privacy + clear authorship + no ambiguity about which agent is "in" any given chat. Group chat surfaces (multiple humans + agents in one room) are explicitly out of scope and deferred to v0.2+.
+Group chats are explicitly out of scope because of Telegram's `privacy mode` gotcha: by default a bot in a group sees only messages addressed to it (`/command` or `@BotName`). To see all messages requires disabling privacy mode via `@BotFather`, an out-of-band step that's easy to forget. v0.1 sidesteps this entirely.
 
-### §11.1.3 Bot delivery (open question, see §11.4)
+### §11.1.3 Long-polling, not webhook (REQUIRED)
 
-Polling vs webhook is unresolved. Polling is simpler — no public ingress required, no inbound port to expose on Hostinger. v0.1 default lean: **polling**, decided when each agent's bot wires up.
+Both bots MUST use long-polling (`getUpdates`). Webhook is forbidden in v0.1.
+
+Rationale: long-polling needs zero inbound network. The bot makes outbound HTTPS to `api.telegram.org` and that's it — same egress posture as the Anthropic API calls each agent already makes. Webhook would require a publicly-resolvable URL with a valid TLS cert and a reverse proxy, adding moving parts for no benefit at our message volume.
+
+**Startup discipline:** every bot start MUST issue an explicit `deleteWebhook` call before the first `getUpdates`. A stale `setWebhook` from any prior testing silently routes all updates to the dead webhook; long-polling sees nothing and the bug looks like "Telegram is broken." `deleteWebhook` at startup is the only way to be sure.
+
+### §11.1.4 Update offset persistence
+
+Each bot maintains a single small JSON file recording the last `update_id` it has consumed. Mandatory paths:
+
+| Agent | Offset file |
+|---|---|
+| Claw | `/docker/openclaw-iemy/data/.openclaw/telegram/update-offset-default.json` (already exists, 348 bytes, mtime 2026-05-01 — Claw is already doing this correctly) |
+| Hermes | `/opt/data/telegram-offset.json` (to be created) |
+
+**Rule:** persist the offset to disk **before** acting on the update, not after. Acting first then persisting is a duplicate-message bug waiting to happen — if the agent crashes mid-action, the next `getUpdates` returns the same update and the action runs twice.
+
+### §11.1.5 Idempotency
+
+The canonical idempotency key for any received Telegram event is `(chat_id, message_id)`. Two events sharing the same key are the same logical event; agents MAY safely no-op a repeat.
+
+For outbound messages, agents SHOULD tag each message with a logical key (a uuid stored in the agent's own state) so retries on network blips can be deduplicated against "I already sent this." This is more important for agent↔agent traffic than for human conversation, where occasional duplicates are tolerable.
+
+### §11.1.6 Rate limits and traffic class
+
+Telegram documented limits: ~30 messages/sec across distinct chats, 1 message/sec to the same chat, 20 messages/minute to the same group. For human↔agent traffic these limits are unreachable. For agent↔agent traffic during state-sync bursts, they are easy to hit.
+
+**Rule:** agent↔agent coordination MUST NOT be routed through Telegram. The filesystem bus (§11.2) is the agent↔agent channel. Telegram is reserved for human↔agent. Specifically:
+
+- Claw → human via Telegram: allowed.
+- Hermes → human via Telegram: allowed.
+- Claw → Hermes via Telegram: forbidden. Use `/coordination/from-claw/`.
+- Hermes → Claw via Telegram: forbidden. Use `/coordination/from-hermes/`.
+
+Exceptions (e.g., a one-shot escalation message routed via human inbox) require a v0.1.x amendment.
+
+When a Telegram call returns 429, agents MUST respect the `retry_after` value in the response. For other errors, exponential backoff with a sensible cap (e.g., 60s). No tight-loop retries.
+
+### §11.1.7 Message format
+
+Default parse mode is **plain text** (no `parse_mode` set). Agents MAY use `HTML` parse mode when formatting is genuinely useful — HTML in Telegram requires escaping only `< > &`, and most libraries ship a safe escaper.
+
+`MarkdownV2` is forbidden by default. Its escape rules cover `_ * [ ] ( ) ~ \ > # + - = | { } . !` — the period and exclamation marks alone make hand-built strings break for most natural English output. If a future use case justifies MarkdownV2, the calling agent MUST use a library-provided escaper, never hand-build the string.
+
+### §11.1.8 File size limits
+
+Bot API caps: 50 MB outbound, 20 MB inbound. v0.1 expects text messages and small attachments only; nothing in the current scope pushes these limits. If a future flow needs to move large artifacts (e.g., a multi-MB session transcript), use the filesystem bus or a presigned URL pattern — do not chunk over Telegram.
+
+### §11.1.9 Library
+
+Recommended (one per stack):
+
+| Stack | Library |
+|---|---|
+| Node.js | Telegraf (production-grade) or grammY (newer, cleaner API) |
+| Python | python-telegram-bot (de facto reference, async) |
+
+Raw HTTP calls to `api.telegram.org` are forbidden in production code paths. Libraries handle offset persistence, rate-limit backoff, retries, and parse-mode escaping; reinventing these is the kind of mistake that surfaces at 3 AM.
+
+OpenClaw runs Node (per `node_modules/openclaw` observed in Phase 2 recon); Telegraf or grammY is the appropriate pick. Hermes's stack is TBD — confirm with operator session before choosing.
+
+### §11.1.10 Single-instance rule
+
+Only one process MAY hold a given bot token's `getUpdates` connection at a time. Two processes racing on the same token will alternate-consume updates and lose half of them silently.
+
+Practical implications: if testing requires a second copy of the agent running, that copy MUST use a separate test bot token. Container restarts during deploy MUST NOT briefly run two instances in parallel; use `down` then `up`, not `up --recreate` patterns that overlap.
 
 ## §11.2 Agent bus
 
@@ -132,12 +197,13 @@ Preemptive migration would add complexity (new bind, new compose path) for no ga
 
 ## §11.4 Open questions (v0.1.x or later)
 
-1. **Hermes private credential path inside container.** v0.1 specifies `/opt/data/credentials/` — confirm with Hermes's actual filesystem layout when wired.
-2. **Bot delivery mechanism.** Polling (default lean) vs webhook. Polling avoids public ingress but uses long-poll connections; webhook needs a publicly resolvable URL. Decide per-agent.
+1. ~~**Hermes private credential path inside container.**~~ **RESOLVED 2026-05-07:** `/docker/hermes-agent-bnz0/data/.private/hermes-telegram.token` (host path) ↔ `/opt/data/.private/hermes-telegram.token` (Hermes view). See §11.1.1.
+2. ~~**Bot delivery mechanism.**~~ **RESOLVED 2026-05-07:** long-polling REQUIRED, webhook forbidden in v0.1. See §11.1.3.
 3. **Group chat surface.** Out of scope for v0.1. Specify when it matters (probably v0.2 or v0.3).
 4. **Bus message id convention.** ISO timestamp + agent prefix? UUID? Content hash? Affects reply-by-reference. v0.1.x decision.
 5. **Bus garbage collection.** Outbound dirs can grow without bound. Time-based prune (delete files >30d)? Ring buffer (last N files)? Manual? v0.1.x decision.
 6. **Pairing-state visibility (replaces v0 Q5).** Should Hermes ever see *redacted* Telegram pairing state from Claw (e.g., "paired: true, identity: Tab")? v0.1 default: no — pairing state is private. Revisit if a use case appears.
+7. **Hermes Node-vs-Python stack.** Library choice in §11.1.9 depends on this. Confirm during bot wire-up.
 
 ---
 
